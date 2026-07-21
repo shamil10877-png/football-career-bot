@@ -1,0 +1,1149 @@
+Holmes:
+import asyncio
+import json
+import os
+import random
+
+from aiogram import Bot, Dispatcher, F
+from aiogram.client.default import DefaultBotProperties
+from aiogram.filters import Command
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
+
+TOKEN = "8849485512:AAEhvLOhm7rLwmXoalUx1Wnp5QKCSbFw7O4"
+
+bot = Bot(
+    token=TOKEN,
+    default=DefaultBotProperties(parse_mode="HTML")
+)
+
+dp = Dispatcher(storage=MemoryStorage())
+
+SAVE_DIR = "players"
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+
+def save_file(user_id):
+    return os.path.join(SAVE_DIR, f"{user_id}.json")
+
+
+def save(user_id, data):
+    with open(save_file(user_id), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+def load(user_id):
+    path = save_file(user_id)
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+def money(x):
+    if x >= 1000000:
+        return f"{x//1000000}M €"
+    if x >= 1000:
+        return f"{x//1000}K €"
+    return f"{x} €"
+
+
+def new_player(name):
+    return {
+        "created": True,
+        "name": name,
+        "club": "Свободный агент",
+        "rating": 60,
+        "potential": 90,
+        "age": 16,
+        "season": 1,
+
+        "matches": 0,
+        "goals": 0,
+        "assists": 0,
+        "mvps": 0,
+
+        "salary": 0,
+        "money": 0,
+        "market_value": 500000,
+
+        "fitness": 100,
+        "morale": 100,
+
+        "pace": 60,
+        "shooting": 60,
+        "passing": 60,
+        "dribbling": 60,
+        "defending": 35,
+        "physical": 55,
+
+        "followers": 100,
+        "popularity": 1,
+
+        "ucl": 0,
+        "league": 0,
+        "worldcup": 0,
+        "ballon": 0,
+
+        "agent": "Нет",
+
+        "boots": "Обычные",
+        "equipment": "Стандартная",
+
+        "trophies": [],
+        "club_history": []
+    }
+
+@dp.message(Command("start"))
+async def start(message: Message):
+    p = load(message.from_user.id)
+
+    if p:
+        await message.answer(
+            f"👋 Добро пожаловать обратно, <b>{p['name']}</b>!\n\n"
+            "Используй /help чтобы посмотреть команды."
+        )
+    else:
+        await message.answer(
+            "⚽ <b>Football Career</b>\n\n"
+            "Создай карьеру:\n"
+            "<code>/create Имя</code>\n\n"
+            "Пример:\n"
+            "<code>/create Alex</code>"
+        )
+
+
+@dp.message(Command("help"))
+async def help_cmd(message: Message):
+    await message.answer("""
+📖 <b>Команды</b>
+
+/profile — профиль
+/train — тренировка
+/match — сыграть матч
+/rest — отдых
+/season — закончить сезон
+/transfers — трансферы
+/agent — агент
+/shop — магазин
+/stats — статистика
+/trophies — трофеи
+/news — новости
+/table — таблица
+/contract — контракт
+""")
+
+
+@dp.message(Command("create"))
+async def create(message: Message):
+    args = message.text.split(maxsplit=1)
+
+    if len(args) < 2:
+        await message.answer("❌ Используй: /create Имя")
+        return
+
+    name = args[1]
+
+    player = new_player(name)
+    save(message.from_user.id, player)
+
+    await message.answer(
+        f"✅ Карьера создана!\n\n"
+        f"👤 Игрок: <b>{name}</b>\n"
+        f"⭐ Рейтинг: 60\n"
+        f"🏟 Клуб: Свободный агент"
+    )
+
+@dp.message(Command("profile"))
+async def profile(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру: /create")
+        return
+
+    await message.answer(
+f"""👤 <b>{p['name']}</b>
+
+⭐ Рейтинг: {p['rating']}
+🌟 Потенциал: {p['potential']}
+
+🏟 Клуб: {p['club']}
+🎂 Возраст: {p['age']}
+
+💰 Деньги: {money(p['money'])}
+💵 Зарплата: {money(p['salary'])}/нед
+📈 Стоимость: {money(p['market_value'])}
+
+⚽ Матчи: {p['matches']}
+🥅 Голы: {p['goals']}
+🎯 Ассисты: {p['assists']}
+🏅 MVP: {p['mvps']}
+
+🏃 Скорость: {p['pace']}
+🎯 Удар: {p['shooting']}
+🎨 Пас: {p['passing']}
+🪄 Дриблинг: {p['dribbling']}
+🛡 Защита: {p['defending']}
+💪 Физика: {p['physical']}
+
+⚡ Форма: {p['fitness']}%
+😊 Мораль: {p['morale']}%
+
+👥 Подписчики: {p['followers']}
+🔥 Популярность: {p['popularity']}
+
+👟 Бутсы: {p['boots']}
+🎽 Экипировка: {p['equipment']}
+"""
+    )
+
+@dp.message(Command("train"))
+async def train(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if p["fitness"] < 20:
+        await message.answer("😴 Ты устал. Используй /rest")
+        return
+
+    stat = random.choice([
+        "pace",
+        "shooting",
+        "passing",
+        "dribbling",
+        "defending",
+        "physical"
+    ])
+
+    plus = random.randint(1, 3)
+
+    p[stat] = min(99, p[stat] + plus)
+
+    p["fitness"] -= random.randint(10, 20)
+    p["morale"] = min(100, p["morale"] + 2)
+
+    p["rating"] = int(
+        (
+            p["pace"] +
+            p["shooting"] +
+            p["passing"] +
+            p["dribbling"] +
+            p["defending"] +
+            p["physical"]
+        ) / 6
+    )
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🏋️ Тренировка завершена!
+
+⬆️ +{plus} к
+
+@dp.message(Command("match"))
+async def match(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if p["fitness"] < 15:
+        await message.answer("😴 Ты слишком устал. Используй /rest")
+        return
+
+    # Чем выше рейтинг — тем лучше статистика
+    goals = random.randint(0, max(1, p["rating"] // 30))
+    assists = random.randint(0, max(1, p["rating"] // 40))
+
+    mvp = random.randint(1, 100) <= p["rating"] - 40
+
+    p["matches"] += 1
+    p["goals"] += goals
+    p["assists"] += assists
+
+    if mvp:
+        p["mvps"] += 1
+
+    gain = goals * 0.40 + assists * 0.25
+    if mvp:
+        gain += 0.50
+
+    p["rating"] = round(min(99, p["rating"] + gain), 1)
+
+    reward = (
+        goals * 15000 +
+        assists * 9000 +
+        (25000 if mvp else 0)
+    )
+
+    p["money"] += reward
+
+    p["market_value"] = int(p["rating"] * 120000)
+
+    p["fitness"] = max(0, p["fitness"] - random.randint(10, 20))
+
+    p["followers"] += random.randint(100, 600)
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🏟 Матч окончен!
+
+⚽ Голы: {goals}
+🎯 Ассисты: {assists}
+⭐ MVP: {"Да" if mvp else "Нет"}
+
+📈 Рейтинг: {p["rating"]}
+💰 Получено: {money(reward)}
+💎 Стоимость: {money(p["market_value"])}
+
+⚡ Форма: {p["fitness"]}%
+👥 Подписчики: {p["followers"]}
+"""
+)
+
+@dp.message(Command("season"))
+async def season(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    p["season"] += 1
+    p["age"] += 1
+
+    # Трофеи
+    if random.randint(1,100) <= p["rating"] - 35:
+        p["league"] += 1
+        p["trophies"].append("🏆 Чемпионат")
+
+    if random.randint(1,100) <= p["rating"] - 55:
+        p["ucl"] += 1
+        p["trophies"].append("⭐ Лига чемпионов")
+
+    if random.randint(1,100) <= 15:
+        p["worldcup"] += 1
+        p["trophies"].append("🌍 Чемпионат мира")
+
+    if p["rating"] >= 88 and random.randint(1,100) <= 35:
+        p["ballon"] += 1
+        p["trophies"].append("🏅 Золотой мяч")
+
+    # Новый контракт
+    salary = int(p["rating"] * 5000)
+    p["salary"] = salary
+
+    # Стоимость
+    p["market_value"] = int(p["rating"] * 150000)
+
+    # Деньги за год
+
+@dp.message(Command("sponsor"))
+async def sponsor(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    sponsors = [
+        ("Nike", 50000),
+        ("Adidas", 45000),
+        ("Puma", 35000),
+        ("New Balance", 30000)
+    ]
+
+    name, reward = random.choice(sponsors)
+
+    p["money"] += reward
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🤝 <b>Новый спонсор!</b>
+
+🏢 Компания: {name}
+💰 Бонус: {money(reward)}
+
+Теперь у тебя {money(p["money"])}.
+"""
+    )
+
+
+@dp.message(Command("daily"))
+async def daily(message: Message):
+    p = load(message.from_user.id)
+
+if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    reward = random.randint(10000, 50000)
+
+    p["money"] += reward
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🎁 <b>Еж
+
+@dp.message(Command("national"))
+async def national(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if p["rating"] < 75:
+        await message.answer(
+f"""🇦🇿 <b>Сборная</b>
+
+Тренер пока не вызывает тебя.
+
+⭐ Нужно минимум 75 рейтинга.
+Твой рейтинг: {p['rating']}
+"""
+        )
+        return
+
+    result = random.choice(["Победа", "Ничья", "Поражение"])
+    goals = random.randint(0, 2)
+    assists = random.randint(0, 2)
+
+    p["matches"] += 1
+    p["goals"] += goals
+    p["assists"] += assists
+
+    if goals + assists >= 2:
+        p["rating"] += 1
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🇦🇿 <b>Матч за сборную
+
+@dp.message(Command("goldenboot"))
+async def goldenboot(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if p["goals"] < 25:
+        await message.answer(
+f"""👟 <b>Золотая бутса</b>
+
+❌ Пока недостаточно голов.
+
+⚽ Голов: {p['goals']}
+🎯 Нужно минимум: 25
+"""
+        )
+        return
+
+    prize = 500000
+
+    p["money"] += prize
+    p["rating"] += 2
+
+    if "Золотая бутса" not in p["trophies"]:
+        p["trophies"].append("Золотая бутса")
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""👟🏆 <b>Ты выиграл Золотую бутсу!</b>
+
+💰 Призовые: {money(prize)}
+⭐ Рейтинг +2
+
+Поздравляем! Ты стал лучшим бомбардиром сезона.
+"""
+    )
+
+@dp.message(Command("interview"))
+async def interview(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    questions = [
+        "Как оцениваешь свою игру?",
+        "Что скажешь о сопернике?",
+        "Веришь, что выиграешь Золотой мяч?",
+        "Какая цель на сезон?",
+        "Что скажешь болельщикам?"
+    ]
+
+    answers = [
+        "«Буду работать ещё усерднее.»",
+        "«Глав
+
+@dp.message(Command("event"))
+async def event(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    event = random.randint(1, 8)
+
+    if event == 1:
+        money = random.randint(50000, 200000)
+        p["money"] += money
+        text = f"📺 Nike предложил рекламу.\n\n💰 +{money(money)}"
+
+    elif event == 2:
+        p["followers"] += random.randint(5000, 20000)
+        text = "📱 Видео стало вирусным!\n\n👥 Подписчики резко выросли."
+
+    elif event == 3:
+        p["rating"] += 1
+        text = "⭐ Тренер похвалил тебя.\n\n
+
+@dp.message(Command("hospital"))
+async def hospital(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if not p.get("injured", False):
+        await message.answer("✅ Ты полностью здоров.")
+        return
+
+    price = 50000
+
+    if p["money"] < price:
+        await message.answer(
+            f"❌ Нужно {money(price)} для лечения."
+        )
+        return
+
+    p["money"] -= price
+    p["injured"] = False
+    p["injury_days"] = 0
+    p["fitness"] = 100
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🏥 <b>Лечение завершено!</b>
+
+✅ Ты полностью восстановился.
+
+💰 Потрачено: {money(price)}
+⚡ Форма: 100%
+"""
+    )
+
+@dp.message(Command("sponsor"))
+async def sponsor(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    sponsors = [
+        ("Nike", 500000),
+        ("Adidas", 450000),
+        ("Puma", 300000),
+        ("EA Sports", 700000),
+        ("Red Bull", 400000),
+        ("Coca-Cola", 350000),
+        ("Pepsi", 320000)
+    ]
+
+    name, money_reward = random.choice(sponsors)
+
+if p["followers"] < 10000:
+        await message.answer(
+            "❌ Нужно минимум 10 000 подписчиков для получения спонсора."
+        )
+        return
+
+    p["money"] += money_reward
+
+    if name not in p["sponsors"]:
+        p["sponsors"].append(name)
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🤝 <b>Новый спонсор!</b>
+
+🏢 Компания: {name}
+
+💰 Контракт: {money(money_reward)}
+
+🎉 Поздравляем!
+"""
+    )
+
+@dp.message(Command("sponsor"))
+async def sponsor(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    sponsors = [
+        ("Nike", 500000),
+        ("Adidas", 450000),
+        ("Puma", 300000),
+        ("EA Sports", 700000),
+        ("Red Bull", 400000),
+        ("Coca-Cola", 350000),
+        ("Pepsi", 320000)
+    ]
+
+    name, money_reward = random.choice(sponsors)
+
+    if p["followers"] < 10000:
+        await message.answer(
+            "❌ Нужно минимум 10 000 подписчиков для получения спонсора."
+        )
+        return
+
+    p["money"] += money_reward
+
+    if name not in p["sponsors"]:
+        p["sponsors"].append(name)
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🤝 <b>Новый спонсор!</b>
+
+🏢 Компания: {name}
+
+💰 Контракт: {money(money_reward)}
+
+🎉 Поздравляем!
+"""
+    )
+
+@dp.message(Command("cars"))
+async def cars(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if "cars" not in p:
+        p["cars"] = []
+
+    cars = [
+        ("BMW M4", 90000),
+        ("Mercedes AMG GT", 180000),
+        ("Audi RS7", 170000),
+        ("Porsche 911", 250000),
+        ("Ferrari F8", 450000),
+        ("Lamborghini Huracan", 500000),
+        ("Bugatti Chiron", 3000000),
+    ]
+
+    car, price = random.choice(cars)
+
+    if p["money"] < price:
+        await message.answer(
+            f"❌ Недостаточно денег.\n\nНужно: {money(price)}"
+        )
+        return
+
+    p["money"] -= price
+    p["cars"].append(car)
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🚗 <b>Покупка завершена!</b>
+
+🚘 Машина: {car}
+
+💰 Цена: {money(price)}
+
+💵 Осталось: {money(p['money'])}
+"""
+    )
+
+@dp.message(Command("house"))
+async def house(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if "houses" not in p:
+        p["houses"] = []
+
+    houses = [
+        ("Квартира", 150000),
+        ("Дом", 500000),
+        ("Вилла", 1500000),
+        ("Особняк", 5000000),
+        ("Замок", 15000000),
+    ]
+
+    home, price = random.choice(houses)
+
+    if p["money"] < price:
+        await message.answer(
+            f"❌ Недостаточно денег.\n\nНужно: {money(price)}"
+        )
+        return
+
+    p["money"] -= price
+    p["houses"].append(home)
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🏠 <b>Поздравляем!</b>
+
+Ты купил:
+
+🏡 {home}
+
+💰 Цена: {money(price)}
+
+💵 Осталось: {money(p['money'])}
+"""
+    )
+
+@dp.message(Command("family"))
+async def family(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if "wife" not in p:
+        p["wife"] = None
+    if "children" not in p:
+        p["children"] = 0
+
+    if p["wife"] is None:
+        girls = [
+            "Анна",
+            "София",
+            "Виктория",
+            "Мария",
+            "Эмилия",
+            "Диана",
+            "Алина"
+        ]
+
+        girl = random.choice(girls)
+        p["wife"] = girl
+
+        save(message.from_user.id, p)
+
+        await message.answer(
+f"""💍 <b>Ты начал отношения!</b>
+
+❤️ Девушка: {girl}
+
+Используй /family ещё раз позже.
+"""
+        )
+        return
+
+    if random.randint(1, 100) <= 35:
+        p["children"] += 1
+        save(message.from_user.id, p)
+
+        await message.answer(
+f"""👶 Поздравляем!
+
+У вас с {p['wife']} родился ребёнок!
+
+👨‍👩‍👧 Детей: {p['children']}
+"""
+        )
+    else:
+        await message.answer(
+f"""👨‍👩‍👧 <b>Семья</b>
+
+❤️ Жена: {p['wife
+
+@dp.message(Command("sponsor"))
+async def sponsor(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if "sponsor" not in p:
+        p["sponsor"] = None
+
+    sponsors = [
+        ("Nike", 50000),
+        ("Adidas", 45000),
+        ("Puma", 40000),
+        ("Under Armour", 35000),
+        ("New Balance", 30000),
+    ]
+
+    if p["sponsor"] is None:
+        if p["rating"] < 70:
+            await message.answer("❌ Пока твой рейтинг слишком низкий для спонсоров.")
+            return
+
+        name, salary = random.choice(sponsors)
+
+        p["sponsor"] = name
+        p["sponsor_salary"] = salary
+
+        save(message.from_user.id, p)
+
+        await message.answer(
+f"""🤝 Новый спонсор!
+
+🏢 {name}
+
+💰
+
+@dp.message(Command("national"))
+async def national(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    if "national_team" not in p:
+        p["national_team"] = False
+        p["national_matches"] = 0
+        p["national_goals"] = 0
+
+    if not p["national_team"]:
+        if p["rating"] < 75:
+            await message.answer("📭 Пока тебя не вызвали в сборную.")
+            return
+
+        p["national_team"] = True
+        save(message.from_user.id, p)
+
+        await message.answer(
+f"""🇦🇿 Поздравляем!
+
+Ты впервые вызван в сборную {p['nation']}!
+"""
+        )
+        return
+
+    goals = random.randint(0, 2)
+    assists = random.randint(0, 1)
+
+    p["national_matches"] +=
+
+@dp.message(Command("records"))
+async def records(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    await message.answer(
+f"""📜 <b>Рекорды</b>
+
+⚽ Голов за карьеру: {p['goals']}
+🎯 Ассистов: {p['assists']}
+🎮 Матчей: {p['matches']}
+⭐ MVP: {p['mvps']}
+
+🏆 Лиги: {p['league_titles']}
+🏆 ЛЧ: {p['ucl']}
+🌍 ЧМ: {p['worldcup']}
+🥇 Золотых мячей: {p['ballon']}
+"""
+    )
+
+
+@dp.message(Command("awards"))
+async def awards(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        await message.answer("❌ Сначала создай карьеру.")
+        return
+
+    total = p["league_titles"] + p["ucl"] + p["worldcup"] + p["ballon"]
+
+    await message.answer(
+f"""🏅 <b>Достижения</b>
+
+🥇 Всего крупных трофеев: {total}
+
+🏆 Чемпионаты: {p['league_titles']}
+🏆 Лига чемпионов: {p['ucl']}
+🌍 Чемпионаты мира: {p['worldcup']}
+⭐ Золотые мячи: {p['ballon']}
+"""
+    )
+
+@dp.message(Command("house"))
+async def house(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    if "house" not in p:
+        p["house"] = "Нет"
+
+    prices = {
+        "Квартира": 300000,
+        "Дом": 1200000,
+        "Вилла": 5000000
+    }
+
+    if p["house"] == "Нет":
+        for name, cost in prices.items():
+            if p["money"] >= cost:
+                p["money"] -= cost
+                p["house"] = name
+                save(message.from_user.id, p)
+                return await message.answer(f"🏠 Ты купил: {name}")
+
+        return await message.answer("💸 Денег пока недостаточно.")
+
+    await message.answer(f"🏠 Твой дом: {p['house']}")
+
+
+@dp.message(Command("car"))
+async def car(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    if "car" not in p:
+        p["car"] = "Нет"
+
+    cars = {
+        "BMW": 150000,
+        "Mercedes": 250000,
+        "Lamborghini": 1500000,
+        "Bugatti": 5000000
+    }
+
+    if p["car"] == "Нет":
+        for name, cost in cars.items():
+            if p["money"] >= cost:
+                p["money"] -= cost
+                p["car"] = name
+                save(message.from_user.id, p)
+                return await message.answer(f"🚗 Куплена {name}")
+
+return await message.answer("💸 Недостаточно денег.")
+
+    await message.answer(f"🚗 Твоя машина: {p['car']}")
+
+
+@dp.message(Command("luxury"))
+async def luxury(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    await message.answer(
+f"""💎 Роскошь
+
+🏠 Дом: {p.get('house','Нет')}
+🚗 Машина: {p.get('car','Нет')}
+💰 Баланс: {money(p['money'])}
+"""
+    )
+
+@dp.message(Command("news"))
+async def news(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    news = [
+        f"📰 {p['name']} оформил дубль в последнем матче!",
+        f"📰 {p['club']} рассчитывает на {p['name']} в новом сезоне.",
+        f"📰 Болельщики признали {p['name']} лучшим игроком недели.",
+        f"📰 Стоимость {p['name']} продолжает расти.",
+        f"📰 {p['
+
+@dp.message(Command("gym"))
+async def gym(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    stat = random.choice([
+        "pace",
+        "shooting",
+        "passing",
+        "dribbling",
+        "physical"
+    ])
+
+    p[stat] += 2
+    p["fitness"] = max(0, p["fitness"] - 8)
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🏋️ Индивидуальная тренировка
+
+📈 {stat} +2
+
+@dp.message(Command("business"))
+async def business(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    if "business" not in p:
+        p["business"] = False
+
+    if not p["business"]:
+        cost = 2_000_000
+
+        if p["money"] < cost:
+            return await message.answer(f"💸 Нужно {money(cost)}.")
+
+        p["money"] -= cost
+        p["business"] = True
+
+        save(message.from_user.id, p)
+
+        return await message.answer(
+            "🏢 Ты открыл собственный бизнес!\nТеперь можешь получать пассивный доход командой /income."
+        )
+
+    await message.answer("🏢 У тебя уже есть свой бизнес.")
+
+
+@dp.message(Command("
+
+@dp.message(Command("fans"))
+async def fans(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    if "reputation" not in p:
+        p["reputation"] = 50
+
+    await message.answer(
+f"""❤️ Фанаты
+
+👥 Подписчики: {p['followers']:,}
+⭐ Репутация: {p['reputation']}/100
+"""
+    )
+
+
+@dp.message(Command("reputation"))
+async def reputation(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    if "reputation" not in p:
+        p["reputation"] = 50
+
+    change = random.randint(-5, 8)
+    p["re
+
+@dp.message(Command("halloffame"))
+async def halloffame(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    trophies = (
+        p["ucl"] +
+        p["league_titles"] +
+        p["worldcup"] +
+        p["ballon"]
+    )
+
+    status = "⭐ Обычный игрок"
+
+    if trophies >= 5:
+        status = "🌟 Звезда"
+
+    if trophies >= 10:
+        status = "👑 Легенда"
+
+    if trophies >= 15:
+        status = "🐐 GOAT"
+
+    await message.answer(
+f"""🏛 <b>Зал славы</b>
+
+👤 {p['name']}
+
+⭐ Статус: {status}
+
+🏆 Трофеев: {trophies}
+⚽ Голов: {p['goals']}
+🎯 Ассистов: {p['assists']}
+🎮 Матчей: {p['matches']}
+🥇 Золотых мячей: {p['ballon']}
+"""
+    )
+
+
+@dp.message(Command("retire"))
+async def retire(message: Message):
+    p = load(message.from_user.id)
+
+    if not p:
+        return await message.answer("❌ Создай карьеру.")
+
+    if p.get("retired"):
+        return await message.answer("❌ Карьера уже завершена.")
+
+    p["retired"] = True
+
+    save(message.from_user.id, p)
+
+    await message.answer(
+f"""🔚 <b>Карьера завершена!</b>
+
+👤 {p['name']}
+
+🏆
+
+if name == "main":
+    asyncio.run(main())
