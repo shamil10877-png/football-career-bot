@@ -57,13 +57,20 @@ async def create_player(user_id):
             55,
             90,
             1000,
+            60,
             0,
-            0,
-            0,
-            0,
-            0,
-            100,
-            100
+0,
+0,
+0,
+100,
+100,
+60,
+60,
+60,
+60,
+60,
+60
+    
         ))
         await db.commit()
 async def update_player(user_id, field, value):
