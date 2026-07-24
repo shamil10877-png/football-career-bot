@@ -22,7 +22,13 @@ async def init_db():
             assists INTEGER,
             trophies INTEGER,
             energy INTEGER,
-            morale INTEGER
+morale INTEGER,
+pace INTEGER,
+shooting INTEGER,
+passing INTEGER,
+dribbling INTEGER,
+defending INTEGER,
+physical INTEGER
         )
         """)
         await db.commit()
