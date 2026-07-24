@@ -60,3 +60,10 @@ async def create_player(user_id):
             100
         ))
         await db.commit()
+async def update_player(user_id, field, value):
+    async with aiosqlite.connect(DB) as db:
+        await db.execute(
+            f"UPDATE players SET {field}=? WHERE user_id=?",
+            (value, user_id)
+        )
+        await db.commit()
