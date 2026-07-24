@@ -13,7 +13,9 @@ from states import CreatePlayer
 from database import update_player
 
 bot = Bot(TOKEN)
-dp = Dispatcher()
+from aiogram.fsm.storage.memory import MemoryStorage
+
+dp = Dispatcher(storage=MemoryStorage())
 
 
 @dp.message(CommandStart())
