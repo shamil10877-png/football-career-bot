@@ -8,22 +8,77 @@ from config import TOKEN
 from keyboards import menu
 from database import *
 
+from aiogram.fsm.context import FSMContext
+from states import CreatePlayer
+from database import update_player
+
 bot = Bot(TOKEN)
 dp = Dispatcher()
 
 
 @dp.message(CommandStart())
-async def start(message: Message):
+async def start(message: Message, state: FSMContext):
 
     if not await player_exists(message.from_user.id):
         await create_player(message.from_user.id)
 
+        await message.answer(
+            "⚽ Добро пожаловать!\n\n"
+            "Напиши имя своего футболиста."
+        )
+
+        await state.set_state(CreatePlayer.first_name)
+        return
+
     await message.answer(
-        "⚽ Добро пожаловать в Footballer Career!\n\n"
-        "Твоя карьера начинается прямо сейчас.",
+        "С возвращением!",
         reply_markup=menu
     )
 
+
+@dp.message(CreatePlayer.first_name)
+async def first_name(message: Message, state: FSMContext):
+
+    await update_player(message.from_user.id, "first_name", message.text)
+
+    await message.answer("Теперь фамилия.")
+
+    await state.set_state(CreatePlayer.last_name)
+
+
+@dp.message(CreatePlayer.last_name)
+async def last_name(message: Message, state: FSMContext):
+
+    await update_player(message.from_user.id, "last_name", message.text)
+
+    await message.answer("Страна?")
+
+    await state.set_state(CreatePlayer.nation)
+
+
+@dp.message(CreatePlayer.nation)
+async def nation(message: Message, state: FSMContext):
+
+    await update_player(message.from_user.id, "nation", message.text)
+
+    await message.answer(
+        "Позиция?\n\nGK\nCB\nLB\nRB\nCDM\nCM\nCAM\nLW\nRW\nST"
+    )
+
+    await state.set_state(CreatePlayer.position)
+
+
+@dp.message(CreatePlayer.position)
+async def position(message: Message, state: FSMContext):
+
+    await update_player(message.from_user.id, "position", message.text.upper())
+
+    await state.clear()
+
+    await message.answer(
+        "✅ Игрок создан!",
+        reply_markup=menu
+    )
 
 @dp.message(F.text == "👤 Профиль")
 async def profile(message: Message):
