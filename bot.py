@@ -10,7 +10,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemo
 from aiogram.enums import ParseMode
 
 # ===================== CONFIG =====================
-BOT_TOKEN = "8849485512:AAEhvLOhm7rLwmXoalUx1Wnp5QKCSbFw7O4"
+BOT_TOKEN = "8419756753:AAGvNMa-5Gc0c1W6GrdF-9C58HANK4VrafE"
 DB_PATH = "football_manager.db"
 MAX_ENERGY = 100
 
